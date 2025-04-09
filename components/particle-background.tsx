@@ -19,6 +19,7 @@ interface ParticleBackgroundProps {
 
 export default function ParticleBackground({ theme }: ParticleBackgroundProps) {
   const [particles, setParticles] = useState<Particle[]>([])
+  const [isClient, setIsClient] = useState(false)
 
   // Get theme-specific colors
   const getThemeColors = () => {
@@ -38,23 +39,26 @@ export default function ParticleBackground({ theme }: ParticleBackgroundProps) {
     }
   }
 
+  // Initialize particles only on client-side
   useEffect(() => {
+    setIsClient(true)
+    
     const colors = getThemeColors()
-
-    // Create initial particles
+    
+    // Create deterministic initial particles
     const initialParticles = [...Array(30)].map((_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 4 + 1,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      speed: Math.random() * 0.2 + 0.1,
-      direction: Math.random() > 0.5 ? 1 : -1,
+      x: (i * 3.33) % 100, // Deterministic x position
+      y: (i * 7.77) % 100, // Deterministic y position
+      size: 1 + ((i % 4) + 1), // 1-5px size
+      color: colors[i % colors.length],
+      speed: 0.1 + ((i % 10) / 50), // Deterministic speed between 0.1-0.3
+      direction: i % 2 === 0 ? 1 : -1, // Alternating direction
     }))
 
     setParticles(initialParticles)
 
-    // Animation loop
+    // Animation loop - only run on client side
     const interval = setInterval(() => {
       setParticles((prevParticles) =>
         prevParticles.map((particle) => {
@@ -78,6 +82,11 @@ export default function ParticleBackground({ theme }: ParticleBackgroundProps) {
     return () => clearInterval(interval)
   }, [theme])
 
+  // Don't render anything during SSR
+  if (!isClient) {
+    return null
+  }
+
   return (
     <div className="fixed inset-0 pointer-events-none z-0">
       {particles.map((particle) => (
@@ -97,7 +106,7 @@ export default function ParticleBackground({ theme }: ParticleBackgroundProps) {
             scale: [1, 1.2, 1],
           }}
           transition={{
-            duration: 3 + Math.random() * 2,
+            duration: 3 + (particle.id % 2),
             repeat: Number.POSITIVE_INFINITY,
             ease: "easeInOut",
           }}
