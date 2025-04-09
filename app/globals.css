@@ -85,6 +85,20 @@ body {
 }
 
 @layer base {
+  @font-face {
+    font-family: "Handwriting";
+    src: url("/fonts/handwriting.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+}
+
+.font-handwriting {
+  font-family: "Handwriting", cursive, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
   * {
     @apply border-border;
   }

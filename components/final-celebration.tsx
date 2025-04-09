@@ -1,11 +1,8 @@
-"use client"
-
 import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import Confetti from "react-confetti"
 import { useWindowSize } from "react-use"
 import { Cake, Heart, Star, Camera, PartyPopper, Gift, Calendar, Infinity } from "lucide-react"
-import Image from "next/image"
 import Fireworks from "@/components/fireworks"
 import GiftBox from "@/components/gift-box"
 import Sparkles from "@/components/sparkles"
@@ -14,6 +11,8 @@ import StarsEffect from "@/components/stars"
 import InfinitySymbol from "@/components/infinity-symbol"
 import FancyButton from "@/components/fancy-button"
 import ParticleBackground from "@/components/particle-background"
+import PhotoGallery from "@/components/photo-gallery"
+import { useInView } from "react-intersection-observer"
 
 export default function FinalCelebration({ name, from }: { name: string; from: string }) {
   const [activeTab, setActiveTab] = useState("wishes")
@@ -24,6 +23,14 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
   const [tabTransition, setTabTransition] = useState("fade")
   const { width, height } = useWindowSize()
   const audioRef = useRef<HTMLAudioElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  })
+
+  const backgroundOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0.6])
+  const backgroundScale = useTransform(scrollYProgress, [0, 0.5], [1, 1.1])
 
   useEffect(() => {
     // Cycle through fireworks and confetti
@@ -119,8 +126,16 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
     }
   }
 
+  // Create refs for each section to check if they're in view
+  const [wishesRef, wishesInView] = useInView({ threshold: 0.1, triggerOnce: false })
+  const [memoriesRef, memoriesInView] = useInView({ threshold: 0.1, triggerOnce: false })
+  const [messageRef, messageInView] = useInView({ threshold: 0.1, triggerOnce: false })
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-200 py-12 px-4 relative overflow-hidden">
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-200 py-12 px-4 relative overflow-hidden"
+    >
       {/* Background audio */}
       <audio ref={audioRef} autoPlay loop>
         <source src="/birthday-music.mp3" type="audio/mp3" />
@@ -130,8 +145,14 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
       {renderEffect()}
       <ParticleBackground theme="grand" />
 
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Animated background elements with parallax effect */}
+      <motion.div
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        style={{
+          opacity: backgroundOpacity,
+          scale: backgroundScale,
+        }}
+      >
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
@@ -154,13 +175,18 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
             }}
           />
         ))}
-      </div>
+      </motion.div>
 
       <div className="container mx-auto max-w-5xl relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{
+            duration: 0.8,
+            type: "spring",
+            stiffness: 100,
+            damping: 15,
+          }}
           className="text-center mb-12"
         >
           <motion.div
@@ -244,8 +270,8 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
           </motion.div>
         </motion.div>
 
-        {/* Navigation tabs */}
-        <div className="flex justify-center mb-8 gap-2 flex-wrap">
+        {/* Navigation tabs - now with smooth scroll snap */}
+        <div className="flex justify-center mb-8 gap-2 flex-wrap sticky top-4 z-30 py-2 px-4 backdrop-blur-md bg-white/30 rounded-full shadow-lg">
           {["wishes", "gallery", "memories", "message", "gift", "forever"].map((tab) => (
             <motion.button
               key={tab}
@@ -281,18 +307,23 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
           ))}
         </div>
 
-        {/* Content area */}
+        {/* Content area with smooth transitions */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 md:p-12"
+            transition={{
+              duration: 0.5,
+              type: "spring",
+              stiffness: 100,
+              damping: 15,
+            }}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 md:p-12 overflow-hidden"
           >
             {activeTab === "wishes" && (
-              <div>
+              <div ref={wishesRef}>
                 <motion.h2
                   className="text-3xl font-bold text-purple-700 mb-8 text-center"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -306,8 +337,13 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      animate={wishesInView ? { opacity: 1, y: 0 } : {}}
+                      transition={{
+                        delay: index * 0.1,
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 15,
+                      }}
                       whileHover={{
                         scale: 1.03,
                         boxShadow: "0 10px 25px -5px rgba(168, 85, 247, 0.2)",
@@ -339,7 +375,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
             )}
 
             {activeTab === "gallery" && (
-              <div>
+              <div className="overflow-visible">
                 <motion.h2
                   className="text-3xl font-bold text-purple-700 mb-8 text-center"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -348,45 +384,13 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                 >
                   Our Photo Gallery
                 </motion.h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="relative aspect-square rounded-xl overflow-hidden shadow-lg group"
-                      whileHover={{
-                        scale: 1.05,
-                        rotate: Math.random() > 0.5 ? 2 : -2,
-                        boxShadow: "0 20px 25px -5px rgba(168, 85, 247, 0.3)",
-                      }}
-                    >
-                      <Image
-                        src={`/placeholder.svg?height=300&width=300&text=Us Together ${i + 1}`}
-                        alt={`Memory ${i + 1}`}
-                        fill
-                        className="object-cover transition-transform group-hover:scale-110"
-                      />
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-t from-purple-900/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end"
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                      >
-                        <motion.p
-                          className="text-white p-4 font-medium"
-                          initial={{ y: 20, opacity: 0 }}
-                          whileHover={{ y: 0, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        >
-                          Our Moment {i + 1}
-                        </motion.p>
-                      </motion.div>
-                    </motion.div>
-                  ))}
+
+                {/* Using our enhanced PhotoGallery component */}
+                <div className="relative -mx-4 md:-mx-12 mt-4 mb-8">
+                  <PhotoGallery />
                 </div>
 
-                <div className="mt-8 text-center">
+                <div className="mt-12 text-center">
                   <motion.p
                     className="text-lg text-purple-700 italic mb-4"
                     initial={{ opacity: 0 }}
@@ -413,7 +417,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
             )}
 
             {activeTab === "memories" && (
-              <div>
+              <div ref={memoriesRef}>
                 <motion.h2
                   className="text-3xl font-bold text-purple-700 mb-8 text-center"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -427,8 +431,13 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      animate={memoriesInView ? { opacity: 1, x: 0 } : {}}
+                      transition={{
+                        delay: index * 0.1,
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 15,
+                      }}
                       whileHover={{
                         scale: 1.02,
                         boxShadow: "0 10px 25px -5px rgba(168, 85, 247, 0.2)",
@@ -489,7 +498,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
             )}
 
             {activeTab === "message" && (
-              <div className="text-center max-w-2xl mx-auto">
+              <div className="text-center max-w-2xl mx-auto" ref={messageRef}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -517,14 +526,14 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
 
                 <motion.div
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  animate={{ opacity: messageInView ? 1 : 0 }}
                   transition={{ delay: 0.3 }}
                   className="space-y-4"
                 >
                   <motion.p
                     className="text-xl text-purple-700 mb-6"
                     initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={messageInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ delay: 0.4 }}
                   >
                     My Dearest {name},
@@ -532,7 +541,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.p
                     className="text-lg text-purple-600 mb-4"
                     initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={messageInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ delay: 0.5 }}
                   >
                     On your special day, I want you to know how much you mean to me. Your smile, your kindness, and your
@@ -541,7 +550,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.p
                     className="text-lg text-purple-600 mb-4"
                     initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={messageInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ delay: 0.6 }}
                   >
                     Thank you for being the amazing person you are. I'm so grateful to have you in my life and to
@@ -550,7 +559,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.p
                     className="text-lg text-purple-600 mb-6"
                     initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={messageInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ delay: 0.7 }}
                   >
                     May this year bring you all the happiness, success, and love you deserve. I promise to be by your
@@ -560,13 +569,13 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.div
                     className="my-8 py-6 border-y border-pink-200"
                     initial={{ opacity: 0, scaleX: 0 }}
-                    animate={{ opacity: 1, scaleX: 1 }}
+                    animate={messageInView ? { opacity: 1, scaleX: 1 } : {}}
                     transition={{ delay: 0.8, duration: 0.5 }}
                   >
                     <motion.p
                       className="text-xl text-pink-600 italic mb-2"
                       initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                      animate={messageInView ? { opacity: 1 } : {}}
                       transition={{ delay: 1 }}
                     >
                       "{quotes[Math.floor(Math.random() * quotes.length)]}"
@@ -576,7 +585,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.p
                     className="text-xl font-bold text-pink-600 mb-2"
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    animate={messageInView ? { opacity: 1 } : {}}
                     transition={{ delay: 1.2 }}
                   >
                     Forever yours,
@@ -584,7 +593,7 @@ export default function FinalCelebration({ name, from }: { name: string; from: s
                   <motion.p
                     className="text-2xl font-bold text-purple-700"
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    animate={messageInView ? { opacity: 1 } : {}}
                     transition={{ delay: 1.3 }}
                   >
                     {from} ❤️
